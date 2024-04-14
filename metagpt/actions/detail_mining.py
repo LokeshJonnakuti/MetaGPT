@@ -41,8 +41,8 @@ OUTPUT_MAPPING = {
 
 
 class DetailMining(Action):
-    """This class allows LLM to further mine noteworthy details based on specific "##TOPIC"(discussion topic) and "##RECORD" (discussion records), thereby deepening the discussion.
-    """
+    """This class allows LLM to further mine noteworthy details based on specific "##TOPIC"(discussion topic) and "##RECORD" (discussion records), thereby deepening the discussion."""
+
     def __init__(self, name="", context=None, llm=None):
         super().__init__(name, context, llm)
 
