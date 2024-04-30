@@ -6,7 +6,9 @@
 @File    : const.py
 """
 from pathlib import Path
+
 from loguru import logger
+
 
 def get_project_root():
     """Search upwards to find the project root directory."""
