@@ -72,7 +72,9 @@ class RunCode(Action):
             return "", traceback.format_exc()
 
     @classmethod
-    async def run_script(cls, working_directory, additional_python_paths=[], command=[]) -> Tuple[str, str]:
+    async def run_script(cls, working_directory, additional_python_paths=None, command=None) -> Tuple[str, str]:
+        additional_python_paths = [] if additional_python_paths is None else additional_python_paths
+        command = [] if command is None else command
         working_directory = str(working_directory)
         additional_python_paths = [str(path) for path in additional_python_paths]
 
@@ -99,8 +101,9 @@ class RunCode(Action):
         return stdout.decode("utf-8"), stderr.decode("utf-8")
 
     async def run(
-        self, code, mode="script", code_file_name="", test_code="", test_file_name="", command=[], **kwargs
+        self, code, mode="script", code_file_name="", test_code="", test_file_name="", command=None, **kwargs
     ) -> str:
+        command = [] if command is None else command
         logger.info(f"Running {' '.join(command)}")
         if mode == "script":
             outs, errs = await self.run_script(command=command, **kwargs)
