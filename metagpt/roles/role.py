@@ -7,17 +7,18 @@
 """
 from __future__ import annotations
 
-from typing import Iterable, Type, Union
 from enum import Enum
+from typing import Iterable, Type, Union
 
 from pydantic import BaseModel, Field
 
+from metagpt.actions import Action, ActionOutput
+
 # from metagpt.environment import Environment
 from metagpt.config import CONFIG
-from metagpt.actions import Action, ActionOutput
 from metagpt.llm import LLM
 from metagpt.logs import logger
-from metagpt.memory import Memory, LongTermMemory
+from metagpt.memory import LongTermMemory, Memory
 from metagpt.schema import Message
 
 PREFIX_TEMPLATE = """You are a {profile}, named {name}, your goal is {goal}, and the constraint is {constraints}. """
@@ -49,6 +50,7 @@ ROLE_TEMPLATE = """Your response should be based on the previous conversation hi
 {name}: {result}
 """
 
+
 class RoleReactMode(str, Enum):
     REACT = "react"
     BY_ORDER = "by_order"
@@ -58,8 +60,10 @@ class RoleReactMode(str, Enum):
     def values(cls):
         return [item.value for item in cls]
 
+
 class RoleSetting(BaseModel):
     """Role Settings"""
+
     name: str
     profile: str
     goal: str
@@ -75,14 +79,17 @@ class RoleSetting(BaseModel):
 
 class RoleContext(BaseModel):
     """Role Runtime Context"""
-    env: 'Environment' = Field(default=None)
+
+    env: "Environment" = Field(default=None)
     memory: Memory = Field(default_factory=Memory)
     long_term_memory: LongTermMemory = Field(default_factory=LongTermMemory)
-    state: int = Field(default=-1) # -1 indicates initial or termination state where todo is None
+    state: int = Field(default=-1)  # -1 indicates initial or termination state where todo is None
     todo: Action = Field(default=None)
     watch: set[Type[Action]] = Field(default_factory=set)
     news: list[Type[Message]] = Field(default=[])
-    react_mode: RoleReactMode = RoleReactMode.REACT # see `Role._set_react_mode` for definitions of the following two attributes
+    react_mode: RoleReactMode = (
+        RoleReactMode.REACT
+    )  # see `Role._set_react_mode` for definitions of the following two attributes
     max_react_loop: int = 1
 
     class Config:
@@ -162,7 +169,7 @@ class Role:
         logger.debug(self._actions)
         self._rc.todo = self._actions[self._rc.state] if state >= 0 else None
 
-    def set_env(self, env: 'Environment'):
+    def set_env(self, env: "Environment"):
         """Set the environment in which the role works. The role can talk to the environment and can also receive messages by observing."""
         self._rc.env = env
 
@@ -184,14 +191,17 @@ class Role:
             self._set_state(0)
             return
         prompt = self._get_prefix()
-        prompt += STATE_TEMPLATE.format(history=self._rc.history, states="\n".join(self._states),
-                                        n_states=len(self._states) - 1, previous_state=self._rc.state)
+        prompt += STATE_TEMPLATE.format(
+            history=self._rc.history,
+            states="\n".join(self._states),
+            n_states=len(self._states) - 1,
+            previous_state=self._rc.state,
+        )
         # print(prompt)
         next_state = await self._llm.aask(prompt)
         logger.debug(f"{prompt=}")
-        if (not next_state.isdigit() and next_state != "-1") \
-            or int(next_state) not in range(-1, len(self._states)):
-            logger.warning(f'Invalid answer of state, {next_state=}, will be set to -1')
+        if (not next_state.isdigit() and next_state != "-1") or int(next_state) not in range(-1, len(self._states)):
+            logger.warning(f"Invalid answer of state, {next_state=}, will be set to -1")
             next_state = -1
         else:
             next_state = int(next_state)
@@ -208,8 +218,12 @@ class Role:
         response = await self._rc.todo.run(self._rc.important_memory)
         # logger.info(response)
         if isinstance(response, ActionOutput):
-            msg = Message(content=response.content, instruct_content=response.instruct_content,
-                        role=self.profile, cause_by=type(self._rc.todo))
+            msg = Message(
+                content=response.content,
+                instruct_content=response.instruct_content,
+                role=self.profile,
+                cause_by=type(self._rc.todo),
+            )
         else:
             msg = Message(content=response, role=self.profile, cause_by=type(self._rc.todo))
         self._rc.memory.add(msg)
@@ -224,15 +238,17 @@ class Role:
         env_msgs = self._rc.env.memory.get()
 
         observed = self._rc.env.memory.get_by_actions(self._rc.watch)
-        
-        self._rc.news = self._rc.memory.find_news(observed)  # find news (previously unseen messages) from observed messages
+
+        self._rc.news = self._rc.memory.find_news(
+            observed
+        )  # find news (previously unseen messages) from observed messages
 
         for i in env_msgs:
             self.recv(i)
 
         news_text = [f"{i.role}: {i.content[:20]}..." for i in self._rc.news]
         if news_text:
-            logger.debug(f'{self._setting} observed: {news_text}')
+            logger.debug(f"{self._setting} observed: {news_text}")
         return len(self._rc.news)
 
     def _publish_message(self, msg):
@@ -244,11 +260,11 @@ class Role:
 
     async def _react(self) -> Message:
         """Think first, then act, until the Role _think it is time to stop and requires no more todo.
-        This is the standard think-act loop in the ReAct paper, which alternates thinking and acting in task solving, i.e. _think -> _act -> _think -> _act -> ... 
+        This is the standard think-act loop in the ReAct paper, which alternates thinking and acting in task solving, i.e. _think -> _act -> _think -> _act -> ...
         Use llm to select actions in _think dynamically
         """
         actions_taken = 0
-        rsp = Message("No actions taken yet") # will be overwritten after Role _act
+        rsp = Message("No actions taken yet")  # will be overwritten after Role _act
         while actions_taken < self._rc.max_react_loop:
             # think
             await self._think()
@@ -258,14 +274,14 @@ class Role:
             logger.debug(f"{self._setting}: {self._rc.state=}, will do {self._rc.todo}")
             rsp = await self._act()
             actions_taken += 1
-        return rsp # return output from the last action
+        return rsp  # return output from the last action
 
     async def _act_by_order(self) -> Message:
         """switch action each time by order defined in _init_actions, i.e. _act (Action1) -> _act (Action2) -> ..."""
         for i in range(len(self._states)):
             self._set_state(i)
             rsp = await self._act()
-        return rsp # return output from the last action
+        return rsp  # return output from the last action
 
     async def _plan_and_act(self) -> Message:
         """first plan, then execute an action sequence, i.e. _think (of a plan) -> _act -> _act -> ... Use llm to come up with the plan dynamically."""
@@ -280,7 +296,7 @@ class Role:
             rsp = await self._act_by_order()
         elif self._rc.react_mode == RoleReactMode.PLAN_AND_ACT:
             rsp = await self._plan_and_act()
-        self._set_state(state=-1) # current reaction is complete, reset state to -1 and todo back to None
+        self._set_state(state=-1)  # current reaction is complete, reset state to -1 and todo back to None
         return rsp
 
     def recv(self, message: Message) -> None:
