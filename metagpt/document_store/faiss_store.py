@@ -17,6 +17,7 @@ from metagpt.const import DATA_PATH
 from metagpt.document_store.base_store import LocalStore
 from metagpt.document_store.document import Document
 from metagpt.logs import logger
+import fickling
 
 
 class FaissStore(LocalStore):
@@ -32,7 +33,7 @@ class FaissStore(LocalStore):
             return None
         index = faiss.read_index(str(index_file))
         with open(str(store_file), "rb") as f:
-            store = pickle.load(f)
+            store = fickling.load(f)
         store.index = index
         return store
 
