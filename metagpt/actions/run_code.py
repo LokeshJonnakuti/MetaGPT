@@ -12,6 +12,7 @@ from typing import Tuple
 
 from metagpt.actions.action import Action
 from metagpt.logs import logger
+from security import safe_command
 
 PROMPT_TEMPLATE = """
 Role: You are a senior development and qa engineer, your role is summarize the code running result.
@@ -85,8 +86,7 @@ class RunCode(Action):
         env["PYTHONPATH"] = additional_python_paths + ":" + env.get("PYTHONPATH", "")
 
         # Start the subprocess
-        process = subprocess.Popen(
-            command, cwd=working_directory, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env
+        process = safe_command.run(subprocess.Popen, command, cwd=working_directory, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env
         )
 
         try:
