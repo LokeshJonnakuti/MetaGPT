@@ -2,9 +2,8 @@
 # @Date    : 2023/7/22 02:40
 # @Author  : stellahong (stellahong@fuzhi.ai)
 #
-from metagpt.team import Team
 from metagpt.roles import ProductManager
-
+from metagpt.team import Team
 from tests.metagpt.roles.ui_role import UI
 
 

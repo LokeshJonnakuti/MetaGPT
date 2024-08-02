@@ -1,17 +1,19 @@
-'''
+"""
 Filename: MetaGPT/examples/debate.py
 Created Date: Tuesday, September 19th 2023, 6:52:25 pm
 Author: garylin2099
-'''
+"""
 import asyncio
 import platform
+
 import fire
 
-from metagpt.team import Team
 from metagpt.actions import Action, BossRequirement
+from metagpt.logs import logger
 from metagpt.roles import Role
 from metagpt.schema import Message
-from metagpt.logs import logger
+from metagpt.team import Team
+
 
 class SpeakAloud(Action):
     """Action: Speak out aloud in a debate (quarrel)"""
@@ -31,13 +33,13 @@ class SpeakAloud(Action):
         super().__init__(name, context, llm)
 
     async def run(self, context: str, name: str, opponent_name: str):
-
         prompt = self.PROMPT_TEMPLATE.format(context=context, name=name, opponent_name=opponent_name)
         # logger.info(prompt)
 
         rsp = await self._aask(prompt)
 
         return rsp
+
 
 class Debator(Role):
     def __init__(
@@ -61,7 +63,7 @@ class Debator(Role):
 
     async def _act(self) -> Message:
         logger.info(f"{self._setting}: ready to {self._rc.todo}")
-        todo = self._rc.todo # An instance of SpeakAloud
+        todo = self._rc.todo  # An instance of SpeakAloud
 
         memories = self.get_memories()
         context = "\n".join(f"{msg.sent_from}: {msg.content}" for msg in memories)
@@ -79,20 +81,21 @@ class Debator(Role):
 
         return msg
 
+
 async def debate(idea: str, investment: float = 3.0, n_round: int = 5):
-    """Run a team of presidents and watch they quarrel. :) """
+    """Run a team of presidents and watch they quarrel. :)"""
     Biden = Debator(name="Biden", profile="Democrat", opponent_name="Trump")
     Trump = Debator(name="Trump", profile="Republican", opponent_name="Biden")
     team = Team()
     team.hire([Biden, Trump])
     team.invest(investment)
-    team.start_project(idea, send_to="Biden") # send debate topic to Biden and let him speak first
+    team.start_project(idea, send_to="Biden")  # send debate topic to Biden and let him speak first
     await team.run(n_round=n_round)
 
 
 def main(idea: str, investment: float = 3.0, n_round: int = 10):
     """
-    :param idea: Debate topic, such as "Topic: The U.S. should commit more in climate change fighting" 
+    :param idea: Debate topic, such as "Topic: The U.S. should commit more in climate change fighting"
                  or "Trump: Climate change is a hoax"
     :param investment: contribute a certain dollar amount to watch the debate
     :param n_round: maximum rounds of the debate
@@ -103,5 +106,5 @@ def main(idea: str, investment: float = 3.0, n_round: int = 10):
     asyncio.run(debate(idea, investment, n_round))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     fire.Fire(main)
