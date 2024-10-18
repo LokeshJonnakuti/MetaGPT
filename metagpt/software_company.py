@@ -5,9 +5,13 @@
 @Author  : alexanderwu
 @File    : software_company.py
 """
+import warnings
+
 from metagpt.team import Team as SoftwareCompany
 
-import warnings
-warnings.warn("metagpt.software_company is deprecated and will be removed in the future"
-              "Please use metagpt.team instead. SoftwareCompany class is now named as Team.",
-              DeprecationWarning, 2)
+warnings.warn(
+    "metagpt.software_company is deprecated and will be removed in the future"
+    "Please use metagpt.team instead. SoftwareCompany class is now named as Team.",
+    DeprecationWarning,
+    2,
+)
